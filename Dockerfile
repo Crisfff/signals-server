@@ -1,31 +1,28 @@
-# Imagen ligera, compatible con TensorFlow-CPU 2.14
+# Dockerfile definitivo
 FROM python:3.9-slim
 
-# Evitar buffers en stdout/stderr
 ENV PYTHONUNBUFFERED=1
-
-# Instalar dependencias de sistema mínimas que TensorFlow necesita
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        libglib2.0-0 libsm6 libxext6 libxrender1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Carpeta de trabajo
 WORKDIR /app
 
-# Copiar todo el código al contenedor
+# ----- 1️⃣  Dependencias básicas + Git-LFS -----
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git-lfs build-essential \
+        libglib2.0-0 libsm6 libxext6 libxrender1 && \
+    git lfs install && \
+    rm -rf /var/lib/apt/lists/*
+
+# ----- 2️⃣  Copiar repo y bajar los binarios LFS -----
 COPY . .
+RUN git lfs pull
 
-# Instalar librerías (solo CPU, ¡mucho más liviano!)
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir \
-         flask \
-         gunicorn \
-         numpy \
-         tensorflow-cpu==2.14.0
+# ----- 3️⃣  Instalar librerías Python -----
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+        flask \
+        gunicorn \
+        numpy \
+        tensorflow-cpu==2.14.0
 
-# Puerto en el que escuchará gunicorn (Render pone $PORT)
 EXPOSE 8000
-
-# Arrancar el servidor
 CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8000"]
