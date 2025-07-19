@@ -3,8 +3,6 @@ import numpy as np
 import tensorflow as tf
 
 app = Flask(name)
-
-# Carga del modelo
 MODEL = tf.keras.models.load_model("modelo_signals.h5")
 
 @app.route("/", methods=["GET"])
@@ -13,17 +11,16 @@ def ping():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    payload = request.get_json(silent=True)
-    if not payload or "features" not in payload:
-        return jsonify({"error": "Debes enviar JSON {'features': [...] }"}), 400
+    data = request.get_json(silent=True)
+    if not data or "features" not in data:
+        return jsonify({"error": "Envía JSON {'features': [o,h,l,c,vol,rsi]}"}), 400
     try:
-        x = np.array(payload["features"]).reshape(1, -1)
+        x = np.array(data["features"]).reshape(1, -1)
         y = MODEL.predict(x)[0][0]
         label = "BUY" if y > 0.55 else "SELL"
         return jsonify({"signal": label, "confidence": float(y)})
-    except Exception as err:
-        return jsonify({"error": str(err)}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if name == "main":
-    # Solo para pruebas locales
     app.run(host="0.0.0.0", port=8000)
